@@ -56,7 +56,7 @@ import {
   FullView, 
   ScrollLockedView,
   ControlledView 
-} from "@joelstarck/scroll-system";
+} from "scroll-system";
 
 export default function App() {
   const [hasAccepted, setHasAccepted] = useState(false);
@@ -444,7 +444,7 @@ import type {
   ScrollSystemAPI,
   ViewState,
   UserIntention
-} from "@joelstarck/scroll-system";
+} from "scroll-system";
 ```
 
 ---
