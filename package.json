@@ -6,7 +6,9 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup index.ts --format cjs,esm --dts",
+    "build": "tsup && tsc --emitDeclarationOnly --declaration --declarationMap --outDir dist",
+    "build:js": "tsup",
+    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
     "test": "vitest",
     "test:run": "vitest run",
     "prepublishOnly": "npm run test:run && npm run build"
