@@ -65,30 +65,40 @@ export function ControlledView({
     setExplicitLock(id, lockState);
   }, [id, canProceed, setExplicitLock]);
 
-  // Clases de overflow
-  const overflowClasses = useMemo(() => {
-    if (!allowInternalScroll) return "overflow-hidden";
+  // Styles for overflow
+  const overflowStyles = useMemo((): React.CSSProperties => {
+    if (!allowInternalScroll) return { overflow: "hidden" };
 
     switch (scrollDirection) {
       case "vertical":
-        return "overflow-y-auto overflow-x-hidden";
+        return { overflowY: "auto", overflowX: "hidden" };
       case "horizontal":
-        return "overflow-x-auto overflow-y-hidden";
+        return { overflowX: "auto", overflowY: "hidden" };
       default:
-        return "overflow-auto";
+        return { overflow: "auto" };
     }
   }, [allowInternalScroll, scrollDirection]);
 
   return (
     <section
       id={id}
-      className={`relative w-full h-screen ${isActive ? "z-10" : "z-0"} ${className}`}
+      className={`controlled-view ${className}`}
       data-view-type="controlled"
       data-active={isActive}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        zIndex: isActive ? 10 : 0,
+      }}
     >
       <div
         ref={scrollRef}
-        className={`w-full h-full ${overflowClasses}`}
+        style={{
+          width: "100%",
+          height: "100%",
+          ...overflowStyles,
+        }}
       >
         {children}
       </div>

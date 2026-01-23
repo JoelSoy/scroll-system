@@ -27,3 +27,6 @@ coverage/
 # Env files
 .env
 .env.local
+
+# Demo project (not part of library)
+demo/

@@ -213,10 +213,20 @@ export function ScrollContainer({
     <GestureConfigContext.Provider value={mergedGestureConfig}>
       <div
         ref={containerRef}
-        className={`scroll-container fixed inset-0 overflow-hidden w-screen h-screen ${className}`}
+        className={`scroll-container ${className}`}
         role="main"
         aria-label="Scroll container"
         data-auto-scrolling={autoScrollState.isPlaying}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: "hidden",
+          width: "100vw",
+          height: "100vh",
+        }}
       >
         <div className="scroll-wrapper" style={wrapperStyle}>
           {children}

@@ -103,22 +103,36 @@ export function ScrollLockedView({
     wasActive.current = isActive;
   }, [isActive, lastNavigationDirection, scrollResetBehavior, scrollDirection]);
 
-  const scrollClasses =
+  const scrollStyles: React.CSSProperties =
     scrollDirection === "vertical"
-      ? "overflow-y-auto overflow-x-hidden"
-      : "overflow-x-auto overflow-y-hidden";
+      ? { overflowY: "auto", overflowX: "hidden" }
+      : { overflowX: "auto", overflowY: "hidden" };
 
   return (
     <section
       id={id}
-      className={`relative w-full h-screen ${className}`}
+      className={`scroll-locked-view ${className}`}
       data-view-type="scroll-locked"
       data-active={isActive ? "true" : "false"}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        overflow: "hidden",
+      }}
     >
       <div
         ref={scrollRef}
-        className={`w-full h-full ${scrollClasses} no-scrollbar`}
-        style={{ scrollbarWidth: "none" }}
+        className="no-scrollbar"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          scrollbarWidth: "none",
+          ...scrollStyles,
+        }}
         data-scrollable="true"
       >
         {children}

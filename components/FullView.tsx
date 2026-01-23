@@ -56,14 +56,13 @@ export function FullView({
   return (
     <section
       id={id}
-      className={`
-        full-view
-        relative
-        w-full h-screen
-        overflow-hidden
-        ${isActive ? "is-active" : ""}
-        ${className}
-      `}
+      className={`full-view ${isActive ? "is-active" : ""} ${className}`}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        overflow: "hidden",
+      }}
       data-view-type="full"
       data-view-index={index}
       data-view-active={isActive}
