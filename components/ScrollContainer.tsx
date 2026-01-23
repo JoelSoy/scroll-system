@@ -14,12 +14,17 @@ import { useHashSync } from "../hooks/useHashSync";
 import { useDragHandler } from "../hooks/useDragHandler";
 import { useFocusManagement } from "../hooks/useFocusManagement";
 import { useScrollSystem } from "../hooks/useScrollSystem";
+import { useGlobalProgress } from "../hooks/useGlobalProgress";
+import { useAutoScroll } from "../hooks/useAutoScroll";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { usePreload } from "../hooks/usePreload";
+import { GestureConfigContext, mergeGestureConfig } from "../hooks/useGestureConfig";
 import { prefersReducedMotion } from "../utils";
 import {
   DEFAULT_TRANSITION_DURATION,
   DEFAULT_TRANSITION_EASING,
 } from "../constants";
-import type { ScrollContainerProps } from "../types";
+import type { ScrollContainerProps, AutoScrollConfig, PreloadConfig } from "../types";
 
 export function ScrollContainer({
   children,
@@ -39,8 +44,16 @@ export function ScrollContainer({
   enableDragPhysics = false,
   // Layout
   orientation = "vertical",
+  // NEW: v1.1.0 Features
+  skipInitialAnimation = false,
+  onProgress,
+  gestureConfig,
+  autoScroll,
+  infiniteScroll = false,
+  preload = true,
 }: ScrollContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
   // SSR Guard: Check if running in browser
   const isBrowser = typeof window !== "undefined";
@@ -94,15 +107,61 @@ export function ScrollContainer({
   // Focus Management (Accessibility)
   useFocusManagement({ enabled: enableFocusManagement });
 
+  // NEW: Global Progress callback
+  useGlobalProgress({ onProgress });
+  
+  // NEW: Infinite Scroll
+  useInfiniteScroll(infiniteScroll);
+  
+  // NEW: AutoScroll
+  const autoScrollState = useAutoScroll(
+    autoScroll ?? { enabled: false, interval: 5000 }
+  );
+  
+  // NEW: Preload
+  const preloadConfig: PreloadConfig | undefined = typeof preload === "boolean" 
+    ? (preload ? { ahead: 1, behind: 1 } : undefined)
+    : preload;
+  usePreload(preloadConfig ?? {});
+  
+  // Merged gesture config
+  const mergedGestureConfig = mergeGestureConfig(gestureConfig);
+
   // Initialization
   useEffect(() => {
     const timer = setTimeout(() => {
       initialize();
       onInitialized?.();
+      isFirstRender.current = false;
     }, 50);
 
     return () => clearTimeout(timer);
   }, [initialize, onInitialized]);
+
+  // Apply mobile optimizations (prevent pull-to-refresh)
+  useEffect(() => {
+    if (!isBrowser) return;
+    
+    const html = document.documentElement;
+    const body = document.body;
+    
+    // Store original values
+    const originalHtmlOverscroll = html.style.overscrollBehavior;
+    const originalBodyOverscroll = body.style.overscrollBehavior;
+    const originalTouchAction = body.style.touchAction;
+    
+    // Apply optimizations
+    html.style.overscrollBehavior = 'none';
+    body.style.overscrollBehavior = 'none';
+    body.style.touchAction = 'pan-x pan-y'; // Allow scroll but prevent browser gestures
+    
+    return () => {
+      // Restore original values on unmount
+      html.style.overscrollBehavior = originalHtmlOverscroll;
+      body.style.overscrollBehavior = originalBodyOverscroll;
+      body.style.touchAction = originalTouchAction;
+    };
+  }, [isBrowser]);
 
   // Handle View Change & Transition
   useEffect(() => {
@@ -132,31 +191,38 @@ export function ScrollContainer({
     const transformAxis = orientation === "horizontal" ? "X" : "Y";
     const sizeUnit = orientation === "horizontal" ? "vw" : "vh";
     
+    // Skip animation on first render if configured
+    const shouldAnimate = !skipInitialAnimation || !isFirstRender.current;
+    const transitionValue = dragState.isDragging 
+      ? "none"
+      : (shouldAnimate && effectiveDuration > 0)
+        ? `transform ${effectiveDuration}ms ${transitionEasing}` 
+        : "none";
+    
     return {
       transform: `translate${transformAxis}(-${baseOffset + dragOffset}${sizeUnit})`,
-      transition: dragState.isDragging 
-        ? "none"
-        : effectiveDuration > 0 
-          ? `transform ${effectiveDuration}ms ${transitionEasing}` 
-          : "none",
+      transition: transitionValue,
       height: "100%",
       width: "100%",
       display: orientation === "horizontal" ? "flex" : "block",
       flexDirection: orientation === "horizontal" ? "row" : undefined,
     };
-  }, [activeIndex, effectiveDuration, transitionEasing, dragState, orientation]);
+  }, [activeIndex, effectiveDuration, transitionEasing, dragState, orientation, skipInitialAnimation]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`scroll-container fixed inset-0 overflow-hidden w-screen h-screen ${className}`}
-      role="main"
-      aria-label="Scroll container"
-    >
-      <div className="scroll-wrapper" style={wrapperStyle}>
-        {children}
+    <GestureConfigContext.Provider value={mergedGestureConfig}>
+      <div
+        ref={containerRef}
+        className={`scroll-container fixed inset-0 overflow-hidden w-screen h-screen ${className}`}
+        role="main"
+        aria-label="Scroll container"
+        data-auto-scrolling={autoScrollState.isPlaying}
+      >
+        <div className="scroll-wrapper" style={wrapperStyle}>
+          {children}
+        </div>
       </div>
-    </div>
+    </GestureConfigContext.Provider>
   );
 }
 

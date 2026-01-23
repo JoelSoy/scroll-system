@@ -5,5 +5,4 @@ export * from "./ControlledView";
 export * from "./ScrollDebugOverlay";
 export * from "./AriaLiveRegion";
 export * from "./LazyView";
-
-
+export * from "./NestedScrollView";

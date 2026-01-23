@@ -1,5 +1,5 @@
 /**
- * PABRIX Scroll System - Navigation Store
+ * Scroll System - Navigation Store
  * ========================================
  * Store principal de Zustand con Arquitectura Determinística.
  * Implementa State Machine explícita y Modelo de Intención.
@@ -33,6 +33,7 @@ function evaluateStateMachine(
   if (explicitLock) return explicitLock;
   if (capability === "none") return "unlocked";
   if (viewType === "full") return "unlocked";
+  if (viewType === "nested") return "unlocked"; // Nested views handle scroll internally
   
   // Tolerance 0.99 ensures user feels the "end" before unlocking
   if (progress >= 0.99) return "unlocked";
@@ -67,6 +68,11 @@ const initialState: ScrollSystemState = {
   isGlobalLocked: false,
   isDragging: false,
   globalProgress: 0,
+  // NEW: AutoScroll state
+  isAutoScrolling: false,
+  isAutoScrollPaused: false,
+  // NEW: Infinite scroll
+  infiniteScrollEnabled: false,
 };
 
 let lastNavigationTime = 0;
@@ -96,12 +102,14 @@ export const useScrollStore = create<ScrollSystemStore>()(
           index: newIndex,
           type: config.type,
           isActive: newIndex === 0,
+          isPreloaded: newIndex <= 1, // Preload first 2 views by default
           capability: "none",
           navigation: "unlocked",
           explicitLock: null,
           progress: 0,
           metrics: { scrollHeight: 0, clientHeight: 0, scrollTop: 0 },
           config,
+          activeSnapPointId: null,
         };
 
         const newViews = [...state.views, newView];
@@ -159,7 +167,12 @@ export const useScrollStore = create<ScrollSystemStore>()(
           navigation,
         };
 
-        return { views: newViews };
+        // Calculate global progress
+        const activeView = newViews[state.activeIndex];
+        const viewProgress = activeView?.progress ?? 0;
+        const globalProgress = (state.activeIndex + viewProgress) / state.totalViews;
+
+        return { views: newViews, globalProgress };
       });
     },
 
@@ -173,53 +186,46 @@ export const useScrollStore = create<ScrollSystemStore>()(
 
       if (intention.type === "navigate") {
          if (intention.direction === "down") {
-             // For DOWN, we strictly obey the 'locked' state (which means "finish content first")
              if (activeView.navigation === "locked") return false;
              
-             if (state.activeIndex < state.totalViews - 1) {
-                 get().goToView(state.activeIndex + 1);
+             // Handle infinite scroll
+             if (state.activeIndex >= state.totalViews - 1) {
+               if (state.infiniteScrollEnabled) {
+                 get().goToView(0);
                  return true;
+               }
+               return false;
              }
-         } else if (intention.direction === "up") {
-             // For UP, we allow exit if:
-             // 1. We are NOT explicitly locked (ControlledView blocking exit? Maybe not common)
-             // 2. We are visually at the top (scrollTop approx 0)
              
-             // Check if visually at top
-             // Note: progress calculation might be 0 even if scrollTop is 0.
-             const isAtTop = activeView.metrics.scrollTop <= 1; // 1px tolerance
+             get().goToView(state.activeIndex + 1);
+             return true;
+         } else if (intention.direction === "up") {
+             const isAtTop = activeView.metrics.scrollTop <= 1;
 
              if (activeView.capability === "internal" && !isAtTop) {
-                 // If we have room to scroll up, we do NOT navigate. We let native scroll happen.
                  return false;
              }
              
-             // Controlled View Back Navigation Logic
              if (activeView.type === "controlled") {
-                 // Cast config to specific type since ViewState generic is loose
                  const config = activeView.config as import("../types").ControlledViewConfig;
-                 
-                 // If allowGoBack is explicitly set to false, we block.
                  if (config.allowGoBack === false) {
                     return false;
                  }
-                 // Otherwise (undefined or true), we allow going back EVEN IF explicitLock is "locked"
-                 // This effectively ignores the "canProceed" lock for backward navigation.
              } else {
-                 // For non-controlled views, standard behavior:
-                 // If explicitLock is "locked", we MIGHT block, but usually "locked" means "cannot finish".
-                 // Detailed rule: Explicit lock usually blocks everything. 
-                 // But let's assume default is: Back is allowed unless specified.
                  if (activeView.explicitLock === "locked") return false; 
              }
              
-             // If we are just "locked" because of internal content (but we are at top), we ALLOW exit.
-             // So we ignore activeView.navigation being "locked" here.
-
-             if (state.activeIndex > 0) {
-                 get().goToView(state.activeIndex - 1);
+             // Handle infinite scroll backward
+             if (state.activeIndex <= 0) {
+               if (state.infiniteScrollEnabled) {
+                 get().goToView(state.totalViews - 1);
                  return true;
+               }
+               return false;
              }
+
+             get().goToView(state.activeIndex - 1);
+             return true;
          }
       }
 
@@ -228,12 +234,18 @@ export const useScrollStore = create<ScrollSystemStore>()(
 
     goToNext: () => {
         const state = get();
-        state.goToView(state.activeIndex + 1);
+        const nextIndex = state.infiniteScrollEnabled && state.activeIndex >= state.totalViews - 1
+          ? 0
+          : state.activeIndex + 1;
+        state.goToView(nextIndex);
     },
 
     goToPrevious: () => {
         const state = get();
-        state.goToView(state.activeIndex - 1);
+        const prevIndex = state.infiniteScrollEnabled && state.activeIndex <= 0
+          ? state.totalViews - 1
+          : state.activeIndex - 1;
+        state.goToView(prevIndex);
     },
 
     goToView: (indexOrId: number | string) => {
@@ -246,20 +258,39 @@ export const useScrollStore = create<ScrollSystemStore>()(
         ? state.views.findIndex(v => v.id === indexOrId)
         : indexOrId;
 
+      // Handle infinite scroll wrap
+      if (state.infiniteScrollEnabled) {
+        if (targetIndex < 0) targetIndex = state.totalViews - 1;
+        if (targetIndex >= state.totalViews) targetIndex = 0;
+      }
+
       if (targetIndex < 0 || targetIndex >= state.totalViews) return;
       if (targetIndex === state.activeIndex) return;
 
-      set((s) => ({
-        ...s,
-        isTransitioning: true,
-        activeIndex: targetIndex,
-        activeId: s.views[targetIndex]?.id ?? null,
-        views: s.views.map(v => {
-            if (v.index === targetIndex) return { ...v, isActive: true };
-            if (v.index === s.activeIndex) return { ...v, isActive: false };
-            return v;
-        })
-      }));
+      set((s) => {
+        // Update preload status for adjacent views
+        const newViews = s.views.map((v, idx) => {
+          const isAdjacent = Math.abs(idx - targetIndex) <= 1 ||
+            (s.infiniteScrollEnabled && (
+              (targetIndex === 0 && idx === s.totalViews - 1) ||
+              (targetIndex === s.totalViews - 1 && idx === 0)
+            ));
+          
+          return {
+            ...v,
+            isActive: idx === targetIndex,
+            isPreloaded: isAdjacent || idx === targetIndex,
+          };
+        });
+
+        return {
+          ...s,
+          isTransitioning: true,
+          activeIndex: targetIndex,
+          activeId: newViews[targetIndex]?.id ?? null,
+          views: newViews,
+        };
+      });
     },
 
     setViewExplicitLock: (id: string, lock: NavigationState | null) => {
@@ -281,10 +312,41 @@ export const useScrollStore = create<ScrollSystemStore>()(
     
     setDragging: (dragging: boolean) => set({ isDragging: dragging }),
 
-    getViewById: (id: string) => get().views.find((v) => v.id === id),
-
     startTransition: () => set({ isTransitioning: true }),
     endTransition: () => set({ isTransitioning: false }),
+    
+    // NEW: AutoScroll control
+    setAutoScrolling: (enabled: boolean) => set({ isAutoScrolling: enabled }),
+    setAutoScrollPaused: (paused: boolean) => set({ isAutoScrollPaused: paused }),
+    
+    // NEW: Infinite scroll
+    setInfiniteScrollEnabled: (enabled: boolean) => set({ infiniteScrollEnabled: enabled }),
+    
+    // NEW: Preload
+    setViewPreloaded: (id: string, preloaded: boolean) => {
+      set((state) => {
+        const index = state.views.findIndex(v => v.id === id);
+        if (index === -1) return state;
+        
+        const newViews = [...state.views];
+        newViews[index] = { ...newViews[index], isPreloaded: preloaded };
+        
+        return { views: newViews };
+      });
+    },
+    
+    // NEW: Snap points
+    setActiveSnapPoint: (viewId: string, snapPointId: string | null) => {
+      set((state) => {
+        const index = state.views.findIndex(v => v.id === viewId);
+        if (index === -1) return state;
+        
+        const newViews = [...state.views];
+        newViews[index] = { ...newViews[index], activeSnapPointId: snapPointId };
+        
+        return { views: newViews };
+      });
+    },
     
     resetNavigationCooldown: () => {
         lastNavigationTime = 0;
@@ -292,7 +354,10 @@ export const useScrollStore = create<ScrollSystemStore>()(
   }))
 );
 
+// ============================================
 // Selectors
+// ============================================
+
 export const selectActiveView = (state: ScrollSystemStore) =>
   state.views[state.activeIndex];
 
@@ -303,10 +368,18 @@ export const selectCanNavigateNext = (state: ScrollSystemStore) => {
   if (state.isTransitioning || state.isGlobalLocked) return false;
   const activeView = state.views[state.activeIndex];
   if (!activeView) return false;
-  return activeView.navigation === "unlocked";
+  if (state.infiniteScrollEnabled) return activeView.navigation === "unlocked";
+  return activeView.navigation === "unlocked" && state.activeIndex < state.totalViews - 1;
 };
 
 export const selectCanNavigatePrevious = (state: ScrollSystemStore) => {
     if (state.isTransitioning || state.isGlobalLocked) return false;
+    if (state.infiniteScrollEnabled) return state.activeIndex >= 0;
     return state.activeIndex > 0;
 };
+
+export const selectGlobalProgress = (state: ScrollSystemStore) =>
+  state.globalProgress;
+
+export const selectIsAutoScrolling = (state: ScrollSystemStore) =>
+  state.isAutoScrolling && !state.isAutoScrollPaused;

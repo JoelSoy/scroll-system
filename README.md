@@ -13,14 +13,27 @@ Built for high-performance marketing sites, portfolios, and web apps that requir
 
 | Feature | Description |
 |---------|-------------|
-| **Snap Views** | 3 specialized view types: `FullView`, `ScrollLockedView`, `ControlledView` |
+| **Snap Views** | 4 view types: `FullView`, `ScrollLockedView`, `ControlledView`, `NestedScrollView` |
 | **1:1 Touch Physics** | Native-feeling drag interaction on mobile (like TikTok/Reels) |
 | **Deterministic Locking** | Smart state machine handles mixed content without bugs |
 | **Accessibility** | Focus management, keyboard navigation, screen reader announcements |
 | **Deep Linking** | URL hash synchronization (`#about`, `#contact`) |
 | **Horizontal Support** | Works in both vertical and horizontal orientations |
-| **Performance** | Lazy loading support and throttled event listeners |
+| **Performance** | Lazy loading, view preloading, throttled event listeners |
 | **Analytics** | Built-in view engagement tracking |
+
+### ✨ New in v1.1.0
+
+| Feature | Description |
+|---------|-------------|
+| **AutoScroll** | Automatic view advancement (carousel mode) |
+| **Infinite Scroll** | Loop from last to first view |
+| **Snap Points** | Multiple "stops" within a single view |
+| **Parallax Effects** | Smooth parallax animations |
+| **Gesture Customization** | Configurable swipe thresholds and velocities |
+| **Global Progress** | Track progress across all views |
+| **Programmatic Lock** | Lock/unlock navigation programmatically |
+| **Auto Mobile Optimization** | Automatically prevents pull-to-refresh |
 
 ---
 
@@ -126,8 +139,14 @@ The root wrapper component. Manages viewport, event listeners, and global state.
 | `hashPushHistory` | `boolean` | `false` | Use `pushState` instead of `replaceState` |
 | `enableFocusManagement` | `boolean` | `true` | Move focus to active view for a11y |
 | `respectReducedMotion` | `boolean` | `true` | Disable animations if OS prefers |
-| `onViewChange` | `(from: number, to: number) => void` | - | Callback when view changes |
+| `onViewChange` | `(from, to) => void` | - | Callback when view changes |
 | `onInitialized` | `() => void` | - | Callback when system initializes |
+| `skipInitialAnimation` | `boolean` | `false` | Skip animation on first render |
+| `onProgress` | `(progress: number) => void` | - | Global progress callback (0-1) |
+| `gestureConfig` | `GestureConfig` | - | Customize swipe thresholds |
+| `autoScroll` | `AutoScrollConfig` | - | Enable automatic view advancement |
+| `infiniteScroll` | `boolean \| InfiniteScrollConfig` | `false` | Loop from last to first |
+| `preload` | `boolean \| PreloadConfig` | `true` | Preload adjacent views |
 
 ---
 
@@ -313,6 +332,122 @@ return (
     style={{ width: `${progress * 100}%` }} 
   />
 );
+```
+
+---
+
+## 🆕 New Hooks (v1.1.0)
+
+### `useGlobalProgress(options)`
+
+Track global scroll progress across all views.
+
+```tsx
+const { progress, percentage, activeIndex } = useGlobalProgress({
+  onProgress: (p) => console.log(`${p * 100}% complete`)
+});
+
+return <ProgressBar value={percentage} />;
+```
+
+---
+
+### `useScrollLock()`
+
+Programmatic control for locking/unlocking navigation.
+
+```tsx
+const { lock, unlock, isLocked, lockView, unlockView } = useScrollLock();
+
+const openModal = () => {
+  lock(); // Prevents all navigation
+  setModalOpen(true);
+};
+```
+
+---
+
+### `useAutoScroll(config)`
+
+Enable automatic view advancement (carousel mode).
+
+```tsx
+const { isPlaying, pause, resume, toggle } = useAutoScroll({
+  enabled: true,
+  interval: 4000,
+  pauseOnInteraction: true,
+  resumeDelay: 3000,
+});
+
+return (
+  <button onClick={toggle}>
+    {isPlaying ? '⏸️ Pause' : '▶️ Play'}
+  </button>
+);
+```
+
+---
+
+### `useInfiniteScroll(config)`
+
+Enable looping from last view to first.
+
+```tsx
+const { isEnabled, toggle } = useInfiniteScroll({ enabled: true });
+
+// Or simply:
+useInfiniteScroll(true);
+```
+
+---
+
+### `useParallax(viewId, config)`
+
+Create parallax effects within views.
+
+```tsx
+function HeroSection() {
+  const { style } = useParallax("hero", { speed: 0.3 });
+  
+  return (
+    <div style={style}>
+      <img src="/background.jpg" alt="Background" />
+    </div>
+  );
+}
+```
+
+---
+
+### `useSnapPoints(options)`
+
+Manage multiple "stops" within a single view.
+
+```tsx
+const snapPoints = [
+  { id: 'intro', position: 0 },
+  { id: 'features', position: 0.33 },
+  { id: 'pricing', position: 0.66 },
+  { id: 'cta', position: 1 },
+];
+
+const { activePoint, goToNextPoint, points } = useSnapPoints({
+  viewId: 'landing',
+  points: snapPoints,
+});
+```
+
+---
+
+### `usePreload(config)`
+
+Control view preloading for smoother transitions.
+
+```tsx
+const { shouldPreload, preloadedViewIds } = usePreload({
+  ahead: 2,  // Preload 2 views ahead
+  behind: 1, // Preload 1 view behind
+});
 ```
 
 ---

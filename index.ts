@@ -17,9 +17,11 @@ export {
   ScrollDebugOverlay,
   AriaLiveRegion,
   LazyView,
+  NestedScrollView,
+  NestedScrollItem,
 } from "./components";
 
-// Hooks
+// Core Hooks
 export {
   useNavigation, // Legacy (consider deprecating for useScrollSystem)
   useViewProgress,
@@ -36,13 +38,29 @@ export {
   useMetricsReporter,
 } from "./hooks";
 
+// Feature Hooks (v1.1.0)
+export {
+  useGlobalProgress,
+  useScrollLock,
+  usePreload,
+  useAutoScroll,
+  useParallax,
+  useActiveParallax,
+  useSnapPoints,
+  createSnapPoints,
+  useInfiniteScroll,
+  useGestureConfig,
+} from "./hooks";
+
 // Store (Advanced access)
 export {
   useScrollStore,
   selectActiveView,
   selectActiveViewProgress,
   selectCanNavigateNext,
-  selectCanNavigatePrevious
+  selectCanNavigatePrevious,
+  selectGlobalProgress,
+  selectIsAutoScrolling,
 } from "./store";
 
 // Types
@@ -56,6 +74,7 @@ export type {
   FullViewConfig,
   ScrollLockedViewConfig,
   ControlledViewConfig,
+  NestedViewConfig,
   ViewConfig,
   ViewState,
   ViewMetrics,
@@ -67,7 +86,18 @@ export type {
   FullViewProps,
   ScrollLockedViewProps,
   ControlledViewProps,
+  NestedScrollViewProps,
   ScrollContainerProps,
+  // NEW: v1.1.0 Types
+  GestureConfig,
+  AutoScrollConfig,
+  SnapPoint,
+  SnapPointState,
+  ParallaxConfig,
+  ParallaxState,
+  PreloadConfig,
+  InfiniteScrollConfig,
+  NestedScrollConfig,
 } from "./types";
 
 // Constants
@@ -78,4 +108,3 @@ export {
   NAVIGATION_COOLDOWN,
   NAV_THRESHOLDS
 } from "./constants";
-

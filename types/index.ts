@@ -44,6 +44,160 @@ export interface UserIntention {
 }
 
 // ============================================
+// Gesture Configuration (NEW)
+// ============================================
+
+/**
+ * Configuration for gesture sensitivity and behavior.
+ */
+export interface GestureConfig {
+  /** Minimum distance in px to trigger a swipe (default: 50) */
+  swipeThreshold?: number;
+  /** Minimum velocity in px/ms to trigger a swipe (default: 0.5) */
+  swipeVelocity?: number;
+  /** Resistance factor when dragging at boundaries 0-1 (default: 0.3) */
+  dragResistance?: number;
+  /** Enable/disable wheel navigation (default: true) */
+  enableWheel?: boolean;
+  /** Enable/disable touch navigation (default: true) */
+  enableTouch?: boolean;
+  /** Enable/disable keyboard navigation (default: true) */
+  enableKeyboard?: boolean;
+}
+
+// ============================================
+// AutoScroll Configuration (NEW)
+// ============================================
+
+/**
+ * Configuration for automatic view advancement.
+ */
+export interface AutoScrollConfig {
+  /** Enable auto-scroll functionality */
+  enabled: boolean;
+  /** Interval between transitions in ms */
+  interval: number;
+  /** Pause auto-scroll when user interacts (default: true) */
+  pauseOnInteraction?: boolean;
+  /** Resume delay after interaction in ms (default: 3000) */
+  resumeDelay?: number;
+  /** Direction of auto-scroll (default: 'forward') */
+  direction?: "forward" | "backward";
+  /** Stop at last view or loop (requires infiniteScroll) */
+  stopAtEnd?: boolean;
+}
+
+// ============================================
+// Snap Points (NEW)
+// ============================================
+
+/**
+ * A snap point within a view for sub-view navigation.
+ */
+export interface SnapPoint {
+  /** Unique identifier for the snap point */
+  id: string;
+  /** Position within the view as percentage 0-1 */
+  position: number;
+  /** Optional label for accessibility */
+  label?: string;
+  /** Callback when this snap point is reached */
+  onReach?: () => void;
+  /** Callback when leaving this snap point */
+  onLeave?: () => void;
+}
+
+/**
+ * State of snap points within a view.
+ */
+export interface SnapPointState {
+  viewId: string;
+  points: SnapPoint[];
+  activePointId: string | null;
+  activePointIndex: number;
+}
+
+// ============================================
+// Parallax Configuration (NEW)
+// ============================================
+
+/**
+ * Configuration for parallax effects.
+ */
+export interface ParallaxConfig {
+  /** Speed multiplier (1 = normal, <1 = slower, >1 = faster). Default: 0.5 */
+  speed?: number;
+  /** Direction of parallax effect (default: matches container orientation) */
+  direction?: "vertical" | "horizontal";
+  /** Initial offset in pixels */
+  offset?: number;
+  /** Easing function for the effect */
+  easing?: "linear" | "easeOut" | "easeInOut";
+}
+
+/**
+ * Return type for useParallax hook.
+ */
+export interface ParallaxState {
+  /** Current transform value in pixels */
+  transform: number;
+  /** CSS transform string ready to use */
+  style: React.CSSProperties;
+  /** Current progress 0-1 based on view visibility */
+  progress: number;
+}
+
+// ============================================
+// Preload Configuration (NEW)
+// ============================================
+
+/**
+ * Configuration for view preloading.
+ */
+export interface PreloadConfig {
+  /** Number of views to preload ahead (default: 1) */
+  ahead?: number;
+  /** Number of views to preload behind (default: 1) */
+  behind?: number;
+  /** Delay before preloading starts in ms (default: 100) */
+  delay?: number;
+}
+
+// ============================================
+// Infinite Scroll Configuration (NEW)
+// ============================================
+
+/**
+ * Configuration for infinite/loop scroll behavior.
+ */
+export interface InfiniteScrollConfig {
+  /** Enable infinite scroll (loop from last to first) */
+  enabled: boolean;
+  /** Direction(s) to loop (default: 'both') */
+  loopDirection?: "forward" | "backward" | "both";
+}
+
+// ============================================
+// Nested Scroll Configuration (NEW)
+// ============================================
+
+/**
+ * Configuration for nested scroll areas.
+ */
+export interface NestedScrollConfig {
+  /** Direction of nested scroll (perpendicular to main) */
+  direction: "horizontal" | "vertical";
+  /** Enable snap behavior within nested scroll */
+  enableSnap?: boolean;
+  /** Number of items/sections in nested scroll */
+  itemCount?: number;
+  /** Current active item index */
+  activeItem?: number;
+  /** Callback when nested item changes */
+  onItemChange?: (index: number) => void;
+}
+
+// ============================================
 // API Pública (Library Contract)
 // ============================================
 
@@ -68,13 +222,18 @@ export interface ScrollSystemAPI {
   activeId: string | null;
   activeViewType: ViewType | null;
   totalViews: number;
+  
+  // NEW: AutoScroll control
+  isAutoScrolling?: boolean;
+  pauseAutoScroll?: () => void;
+  resumeAutoScroll?: () => void;
 }
 
 // ============================================
 // Tipos de Vista
 // ============================================
 
-export type ViewType = "full" | "scroll-locked" | "controlled";
+export type ViewType = "full" | "scroll-locked" | "controlled" | "nested";
 
 export type ScrollDirection = "vertical" | "horizontal" | "none";
 
@@ -87,6 +246,8 @@ export interface BaseViewConfig {
   type: ViewType;
   index?: number;
   meta?: Record<string, unknown>;
+  /** Snap points within this view (NEW) */
+  snapPoints?: SnapPoint[];
 }
 
 export interface FullViewConfig extends BaseViewConfig {
@@ -106,10 +267,16 @@ export interface ControlledViewConfig extends BaseViewConfig {
   allowGoBack?: boolean;
 }
 
+export interface NestedViewConfig extends BaseViewConfig {
+  type: "nested";
+  nestedConfig: NestedScrollConfig;
+}
+
 export type ViewConfig =
   | FullViewConfig
   | ScrollLockedViewConfig
-  | ControlledViewConfig;
+  | ControlledViewConfig
+  | NestedViewConfig;
 
 // ============================================
 // Estado de Vista (State Machine)
@@ -121,6 +288,8 @@ export interface ViewState {
   type: ViewType;
   
   isActive: boolean;
+  /** NEW: Is this view preloaded */
+  isPreloaded: boolean;
   
   capability: ScrollCapability;
   navigation: NavigationState;
@@ -131,6 +300,9 @@ export interface ViewState {
   metrics: ViewMetrics;
   
   config: ViewConfig;
+  
+  /** NEW: Active snap point within this view */
+  activeSnapPointId: string | null;
 }
 
 // ============================================
@@ -146,8 +318,15 @@ export interface ScrollSystemState {
   isInitialized: boolean;
   isTransitioning: boolean;
   isGlobalLocked: boolean;
-  isDragging: boolean; // True when touch drag is active
+  isDragging: boolean;
   globalProgress: number;
+  
+  /** NEW: AutoScroll state */
+  isAutoScrolling: boolean;
+  isAutoScrollPaused: boolean;
+  
+  /** NEW: Infinite scroll enabled */
+  infiniteScrollEnabled: boolean;
 }
 
 // ============================================
@@ -179,6 +358,19 @@ export interface ScrollSystemActions {
   startTransition: () => void;
   endTransition: () => void;
   
+  // NEW: AutoScroll control
+  setAutoScrolling: (enabled: boolean) => void;
+  setAutoScrollPaused: (paused: boolean) => void;
+  
+  // NEW: Infinite scroll
+  setInfiniteScrollEnabled: (enabled: boolean) => void;
+  
+  // NEW: Preload
+  setViewPreloaded: (id: string, preloaded: boolean) => void;
+  
+  // NEW: Snap points
+  setActiveSnapPoint: (viewId: string, snapPointId: string | null) => void;
+  
   // Testing/Internal
   resetNavigationCooldown: () => void;
 }
@@ -194,19 +386,20 @@ export interface BaseViewProps {
   children: React.ReactNode;
   className?: string;
   
-  // Lifecycle callbacks (existing)
+  // Lifecycle callbacks
   onActivate?: () => void;
   onDeactivate?: () => void;
   
-  // Transition callbacks (new)
-  /** Called when view starts entering (transition begins) */
+  // Transition callbacks
   onEnterStart?: () => void;
-  /** Called when view finishes entering (transition complete) */
   onEnterEnd?: () => void;
-  /** Called when view starts exiting (transition begins) */
   onExitStart?: () => void;
-  /** Called when view finishes exiting (transition complete) */
   onExitEnd?: () => void;
+  
+  /** NEW: Snap points within this view */
+  snapPoints?: SnapPoint[];
+  /** NEW: Callback when snap point changes */
+  onSnapPointChange?: (snapPointId: string | null) => void;
 }
 
 export interface FullViewProps extends BaseViewProps {
@@ -226,6 +419,16 @@ export interface ControlledViewProps extends BaseViewProps {
   allowGoBack?: boolean;
 }
 
+/** NEW: Props for NestedScrollView component */
+export interface NestedScrollViewProps extends BaseViewProps {
+  /** Direction of nested scroll (perpendicular to main) */
+  nestedDirection?: "horizontal" | "vertical";
+  /** Enable snap behavior within nested scroll */
+  enableSnap?: boolean;
+  /** Callback when nested item changes */
+  onItemChange?: (index: number) => void;
+}
+
 export interface ScrollContainerProps {
   children: React.ReactNode;
   className?: string;
@@ -235,25 +438,42 @@ export interface ScrollContainerProps {
   onInitialized?: () => void;
   
   // Deep Linking
-  /** Enable URL hash sync for deep linking (default: false) */
   enableHashSync?: boolean;
-  /** Use pushState instead of replaceState for hash updates (default: false) */
   hashPushHistory?: boolean;
-  /** Prefix for hash (e.g., "section-" creates "#section-hero") */
   hashPrefix?: string;
   
   // Accessibility
-  /** Respect prefers-reduced-motion OS setting (default: true) */
   respectReducedMotion?: boolean;
-  /** Enable focus management for screen readers (default: true) */
   enableFocusManagement?: boolean;
   
   // Touch Physics
-  /** Enable 1:1 drag physics for touch devices (default: false) */
   enableDragPhysics?: boolean;
   
   // Layout
-  /** Scroll orientation: vertical or horizontal (default: "vertical") */
   orientation?: "vertical" | "horizontal";
+  
+  // NEW: Skip Initial Animation
+  /** Skip the initial animation when mounting (default: false) */
+  skipInitialAnimation?: boolean;
+  
+  // NEW: Global Progress
+  /** Callback reporting global scroll progress 0-1 */
+  onProgress?: (progress: number) => void;
+  
+  // NEW: Gesture Configuration
+  /** Custom gesture sensitivity and behavior */
+  gestureConfig?: GestureConfig;
+  
+  // NEW: AutoScroll
+  /** Enable automatic view advancement */
+  autoScroll?: AutoScrollConfig;
+  
+  // NEW: Infinite Scroll
+  /** Enable looping from last to first view */
+  infiniteScroll?: boolean | InfiniteScrollConfig;
+  
+  // NEW: Preload
+  /** Configure view preloading */
+  preload?: boolean | PreloadConfig;
 }
 
