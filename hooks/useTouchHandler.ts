@@ -30,7 +30,7 @@ function canNavigateFromScrollPosition(direction: "up" | "down"): boolean {
   
   // Find the scroll container
   const scrollContainer = document.querySelector(
-    `[data-view-type="scroll-locked"][data-active="true"] > div`
+    `[data-view-type="scroll-locked"][data-active="true"] [data-scrollable="true"]`
   ) as HTMLElement | null;
   
   if (!scrollContainer) {

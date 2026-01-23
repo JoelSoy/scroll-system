@@ -131,6 +131,7 @@ export function ScrollLockedView({
           right: 0,
           bottom: 0,
           scrollbarWidth: "none",
+          touchAction: scrollDirection === "vertical" ? "pan-y" : "pan-x",
           ...scrollStyles,
         }}
         data-scrollable="true"
