@@ -119,6 +119,7 @@ export function ScrollLockedView({
         ref={scrollRef}
         className={`w-full h-full ${scrollClasses} no-scrollbar`}
         style={{ scrollbarWidth: "none" }}
+        data-scrollable="true"
       >
         {children}
       </div>

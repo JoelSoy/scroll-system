@@ -1,6 +1,6 @@
 {
   "name": "scroll-system",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "TikTok-style vertical scroll system with snap views, touch physics, and accessibility features",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
