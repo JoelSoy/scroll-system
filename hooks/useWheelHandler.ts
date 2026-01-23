@@ -28,6 +28,32 @@ export function useWheelHandler() {
 
       // 2. Normalizar evento (cross-browser)
       const normalized = normalizeWheel(event);
+
+      // 3. Check if active view has internal scroll capability
+      const activeView = state.views[state.activeIndex];
+      if (activeView?.capability === "internal") {
+        const scrollContainer = document.querySelector(
+          `[data-view-type="scroll-locked"][data-active="true"] > div`
+        ) as HTMLElement | null;
+        
+        if (scrollContainer) {
+          const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+          const maxScroll = scrollHeight - clientHeight;
+          
+          // Determine scroll direction and boundary state
+          const isScrollingDown = normalized.pixelY > 0;
+          const isScrollingUp = normalized.pixelY < 0;
+          const isAtBottom = scrollTop >= maxScroll - 1;
+          const isAtTop = scrollTop <= 1;
+          
+          // Allow native scroll if not at boundary in scroll direction
+          if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+            // Reset accumulator when allowing internal scroll
+            scrollAccumulator.current = 0;
+            return; // Don't prevent default, let native scroll work
+          }
+        }
+      }
       const delta = normalized.pixelY;
 
       // 3. Acumular delta para thresholds
