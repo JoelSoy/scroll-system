@@ -59,7 +59,7 @@ export function ScrollLockedView({
       id={id}
       className={`relative w-full h-screen ${className}`}
       data-view-type="scroll-locked"
-      data-active={isActive}
+      data-active={isActive ? "true" : "false"}
     >
       <div
         ref={scrollRef}
