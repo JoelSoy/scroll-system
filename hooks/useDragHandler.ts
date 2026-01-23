@@ -126,16 +126,41 @@ export function useDragHandler(options: UseDragHandlerOptions = {}) {
       const store = useScrollStore.getState();
       const atStart = store.activeIndex === 0;
       const atEnd = store.activeIndex === store.totalViews - 1;
+      const activeView = store.views[store.activeIndex];
       
       // Determine if we should navigate
       const exceedsThreshold = Math.abs(deltaY) > DRAG_THRESHOLD;
       const hasVelocity = velocity > VELOCITY_THRESHOLD;
       const direction = deltaY > 0 ? "down" : "up";
       
+      // Check if active view has internal scroll
+      let canNavigateInternal = true;
+      if (activeView?.capability === "internal") {
+        const scrollContainer = document.querySelector(
+          `[data-view-type="scroll-locked"][data-active="true"] > div`
+        ) as HTMLElement | null;
+        
+        if (scrollContainer) {
+          const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+          const maxScroll = scrollHeight - clientHeight;
+          const isAtBottom = scrollTop >= maxScroll - 1;
+          const isAtTop = scrollTop <= 1;
+          
+          // Only allow navigation if at the appropriate boundary
+          if (direction === "down" && !isAtBottom) {
+            canNavigateInternal = false;
+          }
+          if (direction === "up" && !isAtTop) {
+            canNavigateInternal = false;
+          }
+        }
+      }
+      
       // Check bounds
       const canNavigate = 
-        (direction === "down" && !atEnd) || 
-        (direction === "up" && !atStart);
+        canNavigateInternal &&
+        ((direction === "down" && !atEnd) || 
+        (direction === "up" && !atStart));
       
       const shouldNavigate = canNavigate && (exceedsThreshold || hasVelocity);
       

@@ -73,6 +73,8 @@ const initialState: ScrollSystemState = {
   isAutoScrollPaused: false,
   // NEW: Infinite scroll
   infiniteScrollEnabled: false,
+  // NEW: Last navigation direction
+  lastNavigationDirection: null,
 };
 
 let lastNavigationTime = 0;
@@ -268,6 +270,9 @@ export const useScrollStore = create<ScrollSystemStore>()(
       if (targetIndex === state.activeIndex) return;
 
       set((s) => {
+        // Determine navigation direction
+        const navigationDirection = targetIndex > s.activeIndex ? "down" : "up";
+        
         // Update preload status for adjacent views
         const newViews = s.views.map((v, idx) => {
           const isAdjacent = Math.abs(idx - targetIndex) <= 1 ||
@@ -289,6 +294,7 @@ export const useScrollStore = create<ScrollSystemStore>()(
           activeIndex: targetIndex,
           activeId: newViews[targetIndex]?.id ?? null,
           views: newViews,
+          lastNavigationDirection: navigationDirection,
         };
       });
     },
@@ -374,7 +380,11 @@ export const selectCanNavigateNext = (state: ScrollSystemStore) => {
 
 export const selectCanNavigatePrevious = (state: ScrollSystemStore) => {
     if (state.isTransitioning || state.isGlobalLocked) return false;
-    if (state.infiniteScrollEnabled) return state.activeIndex >= 0;
+    const activeView = state.views[state.activeIndex];
+    if (!activeView) return false;
+    // With infinite scroll, can always navigate previous (it wraps)
+    if (state.infiniteScrollEnabled) return true;
+    // Without infinite scroll, check if we're not at the first view
     return state.activeIndex > 0;
 };
 

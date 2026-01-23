@@ -15,6 +15,41 @@ export interface UseTouchHandlerOptions {
   enabled?: boolean;
 }
 
+/**
+ * Check if active view allows navigation based on scroll position.
+ * Returns true if navigation should be allowed.
+ */
+function canNavigateFromScrollPosition(direction: "up" | "down"): boolean {
+  const state = useScrollStore.getState();
+  const activeView = state.views[state.activeIndex];
+  
+  // If no internal scroll capability, allow navigation
+  if (activeView?.capability !== "internal") {
+    return true;
+  }
+  
+  // Find the scroll container
+  const scrollContainer = document.querySelector(
+    `[data-view-type="scroll-locked"][data-active="true"] > div`
+  ) as HTMLElement | null;
+  
+  if (!scrollContainer) {
+    return true;
+  }
+  
+  const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+  const maxScroll = scrollHeight - clientHeight;
+  const isAtBottom = scrollTop >= maxScroll - 1;
+  const isAtTop = scrollTop <= 1;
+  
+  // Only allow navigation if at the appropriate boundary
+  if (direction === "down") {
+    return isAtBottom;
+  } else {
+    return isAtTop;
+  }
+}
+
 export function useTouchHandler(options: UseTouchHandlerOptions = {}) {
   const { enabled = true } = options;
   
@@ -53,7 +88,14 @@ export function useTouchHandler(options: UseTouchHandlerOptions = {}) {
       ) {
         const direction = deltaY > 0 ? "down" : "up";
 
-        // 2. Construir Intención
+        // 2. Check if we can navigate based on internal scroll position
+        if (!canNavigateFromScrollPosition(direction)) {
+          // Don't navigate, let internal scroll continue
+          touchStart.current = null;
+          return;
+        }
+
+        // 3. Construir Intención
         const intention: UserIntention = {
           type: "navigate",
           direction: direction,
@@ -61,7 +103,7 @@ export function useTouchHandler(options: UseTouchHandlerOptions = {}) {
           origin: "touch"
         };
         
-        // 3. Enviar al Store
+        // 4. Enviar al Store
         useScrollStore.getState().processIntention(intention);
       }
 
@@ -77,4 +119,3 @@ export function useTouchHandler(options: UseTouchHandlerOptions = {}) {
     };
   }, [enabled]);
 }
-

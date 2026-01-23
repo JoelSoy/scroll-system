@@ -237,6 +237,15 @@ export type ViewType = "full" | "scroll-locked" | "controlled" | "nested";
 
 export type ScrollDirection = "vertical" | "horizontal" | "none";
 
+/**
+ * Behavior for resetting scroll position when view becomes active.
+ * - "direction-aware": (default) Reset to start when coming from above, end when coming from below
+ * - "always-start": Always reset to start
+ * - "always-end": Always reset to end
+ * - "preserve": Keep the current scroll position
+ */
+export type ScrollResetBehavior = "direction-aware" | "always-start" | "always-end" | "preserve";
+
 // ============================================
 // Configuración de Vista
 // ============================================
@@ -258,6 +267,8 @@ export interface ScrollLockedViewConfig extends BaseViewConfig {
   type: "scroll-locked";
   scrollDirection: ScrollDirection;
   scrollEndThreshold?: number;
+  /** Behavior for resetting scroll when view becomes active (default: "direction-aware") */
+  scrollResetBehavior?: ScrollResetBehavior;
 }
 
 export interface ControlledViewConfig extends BaseViewConfig {
@@ -327,6 +338,9 @@ export interface ScrollSystemState {
   
   /** NEW: Infinite scroll enabled */
   infiniteScrollEnabled: boolean;
+  
+  /** NEW: Last navigation direction (for scroll reset behavior) */
+  lastNavigationDirection: "up" | "down" | null;
 }
 
 // ============================================
@@ -410,6 +424,8 @@ export interface ScrollLockedViewProps extends BaseViewProps {
   scrollDirection?: ScrollDirection;
   scrollEndThreshold?: number;
   onScrollProgress?: (progress: number) => void;
+  /** Behavior for resetting scroll when view becomes active (default: "direction-aware") */
+  scrollResetBehavior?: ScrollResetBehavior;
 }
 
 export interface ControlledViewProps extends BaseViewProps {

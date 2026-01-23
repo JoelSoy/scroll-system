@@ -178,6 +178,7 @@ Smart container for long content. Automatically detects overflow and locks navig
 | `className` | `string` | `""` | CSS classes |
 | `scrollDirection` | `"vertical"` \| `"horizontal"` | `"vertical"` | Internal scroll direction |
 | `scrollEndThreshold` | `number` | `0.99` | Progress threshold to unlock (0-1) |
+| `scrollResetBehavior` | `ScrollResetBehavior` | `"direction-aware"` | How to reset scroll position on activation |
 | `onScrollProgress` | `(progress: number) => void` | - | Called on internal scroll |
 | `onActivate` | `() => void` | - | Called when view becomes active |
 | `onDeactivate` | `() => void` | - | Called when view becomes inactive |
@@ -185,6 +186,12 @@ Smart container for long content. Automatically detects overflow and locks navig
 | `onEnterEnd` | `() => void` | - | Called when enter transition ends |
 | `onExitStart` | `() => void` | - | Called when exit transition starts |
 | `onExitEnd` | `() => void` | - | Called when exit transition ends |
+
+**`ScrollResetBehavior` options:**
+- `"direction-aware"` (default): Resets to **start** when navigating down (from above), resets to **end** when navigating up (from below)
+- `"always-start"`: Always reset to the beginning of the scroll
+- `"always-end"`: Always reset to the end of the scroll  
+- `"preserve"`: Keep the current scroll position (no reset)
 
 **Behavior:**
 - If content fits viewport → Acts like `FullView`
@@ -529,17 +536,11 @@ Enable 1:1 native-feeling touch interactions:
 
 ## 📱 Mobile Optimization
 
-For the best app-like experience on mobile:
+The `ScrollContainer` **automatically applies** mobile-optimized styles when mounted:
+- `overscroll-behavior: none` - Prevents pull-to-refresh
+- `touch-action: pan-x pan-y` - Ensures proper touch handling
 
-```css
-html, body {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior-y: none; /* Prevents pull-to-refresh */
-}
-```
+These styles are automatically removed when the component unmounts.
 
 ### Fullscreen API (Optional)
 ```tsx
