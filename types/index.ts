@@ -426,6 +426,8 @@ export interface ScrollLockedViewProps extends BaseViewProps {
   onScrollProgress?: (progress: number) => void;
   /** Behavior for resetting scroll when view becomes active (default: "direction-aware") */
   scrollResetBehavior?: ScrollResetBehavior;
+  /** Force scroll lock behavior even without overflow (default: false) */
+  forceScrollLock?: boolean;
 }
 
 export interface ControlledViewProps extends BaseViewProps {

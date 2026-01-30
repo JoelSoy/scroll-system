@@ -80,6 +80,13 @@ export function useMetricsReporter({
 
     // Initial measure (immediate)
     measureAndReport();
+    
+    // Delayed measure to catch late renders (fonts loading, images, etc.)
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => measureAndReport());
+    } else {
+      setTimeout(() => measureAndReport(), 150);
+    }
 
     return () => {
       resizeObserver.disconnect();

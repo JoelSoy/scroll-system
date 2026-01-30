@@ -35,6 +35,15 @@ Built for high-performance marketing sites, portfolios, and web apps that requir
 | **Programmatic Lock** | Lock/unlock navigation programmatically |
 | **Auto Mobile Optimization** | Automatically prevents pull-to-refresh |
 
+### 🆕 New in v1.4.0
+
+| Feature | Description |
+|---------|-------------|
+| **Auto Overflow Detection** | `ScrollLockedView` now automatically detects if content overflows. If no overflow, it behaves like `FullView` (immediate navigation). |
+| **Responsive Friendly** | Content that fits on desktop but overflows on mobile is handled automatically |
+| **forceScrollLock** | Optional prop to force scroll lock behavior even without overflow |
+| **Improved Timing** | Uses `requestIdleCallback` for reliable initial measurement |
+
 ---
 
 ## 📦 Installation
