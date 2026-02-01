@@ -352,6 +352,7 @@ export interface ScrollSystemState {
 export interface ScrollSystemActions {
   initialize: () => void;
   registerView: (config: ViewConfig) => void;
+  updateViewConfig: (id: string, config: Partial<ViewConfig>) => void;
   unregisterView: (id: string) => void;
 
   // Input Processing

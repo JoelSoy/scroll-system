@@ -32,6 +32,7 @@ export function useViewRegistration({
   // Use stable selectors
   const registerView = useScrollStore((s) => s.registerView);
   const unregisterView = useScrollStore((s) => s.unregisterView);
+  const updateViewConfig = useScrollStore((s) => s.updateViewConfig);
   const activeId = useScrollStore((s) => s.activeId);
   const isTransitioning = useScrollStore((s) => s.isTransitioning);
 
@@ -49,18 +50,24 @@ export function useViewRegistration({
   const wasActiveRef = useRef(false);
   const wasTransitioningRef = useRef(false);
 
-  // Configuration Ref to prevent unnecessary effect triggers
-  const configRef = useRef(config);
-  if (JSON.stringify(config) !== JSON.stringify(configRef.current)) {
-    configRef.current = config;
-  }
-
-  // Registration
+  // 1. Initial Registration (Only re-run if ID changes)
+  // We use a ref for the ID to ensure we only unregister the specific ID that was registered
   useEffect(() => {
-    const currentConfig = configRef.current;
-    registerView(currentConfig);
-    return () => unregisterView(currentConfig.id);
-  }, [registerView, unregisterView, configRef.current]);
+    registerView(config);
+    return () => unregisterView(config.id);
+  }, [config.id, registerView, unregisterView]);
+
+  // 2. Dynamic Updates (Handle prop changes like forceScrollLock)
+  const prevConfigStr = useRef(JSON.stringify(config));
+  
+  useEffect(() => {
+    const currentConfigStr = JSON.stringify(config);
+    if (prevConfigStr.current !== currentConfigStr) {
+      updateViewConfig(config.id, config);
+      prevConfigStr.current = currentConfigStr;
+    }
+  }, [config, updateViewConfig]);
+
 
   // Get current state
   const viewState = useScrollStore(s => s.views.find(v => v.id === config.id));

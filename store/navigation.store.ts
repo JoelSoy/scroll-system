@@ -33,9 +33,8 @@ function evaluateStateMachine(
   
   if (explicitLock) return explicitLock;
   
-  // If forceScrollLock is true, treat as if there's internal scroll (locked until progress >= 0.99)
+  // If forceScrollLock is true, ALWAYS lock. The user must manually handle unlocking (e.g. by setting prop to false)
   if (forceScrollLock && viewType === "scroll-locked") {
-    if (progress >= 0.99) return "unlocked";
     return "locked";
   }
   
@@ -147,6 +146,33 @@ export const useScrollStore = create<ScrollSystemStore>()(
           activeIndex: Math.max(0, newActiveIndex),
           activeId: newViews[newActiveIndex]?.id ?? null,
         };
+      });
+    },
+    
+    updateViewConfig: (id: string, config: Partial<ViewConfig>) => {
+      set((state) => {
+        const index = state.views.findIndex(v => v.id === id);
+        if (index === -1) return state;
+
+        const view = state.views[index];
+        const newConfig = { ...view.config, ...config } as ViewConfig; // Type assertion
+
+        // Re-evaluate state machine with new config
+        // Extract forceScrollLock from NEW config if it's a scroll-locked view
+        const forceScrollLock = newConfig.type === "scroll-locked" 
+          ? (newConfig as import("../types").ScrollLockedViewConfig).forceScrollLock 
+          : undefined;
+
+        const navigation = evaluateStateMachine(view.capability, view.progress, newConfig.type, view.explicitLock, forceScrollLock);
+
+        const newViews = [...state.views];
+        newViews[index] = {
+          ...view,
+          config: newConfig,
+          navigation // Update navigation state based on new config
+        };
+
+        return { views: newViews };
       });
     },
 
