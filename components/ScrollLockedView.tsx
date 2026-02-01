@@ -19,6 +19,7 @@ export function ScrollLockedView({
   scrollDirection = "vertical",
   scrollEndThreshold = 0.99,
   scrollResetBehavior = "direction-aware",
+  forceScrollLock = false,
   onScrollProgress,
   onActivate,
   onDeactivate,
@@ -35,6 +36,7 @@ export function ScrollLockedView({
       scrollDirection,
       scrollEndThreshold,
       scrollResetBehavior,
+      forceScrollLock,
     },
     onActivate,
     onDeactivate,
@@ -43,6 +45,7 @@ export function ScrollLockedView({
     onExitStart,
     onExitEnd,
   });
+
 
   // Metrics Reporter (Encapsula ResizeObserver y Scroll Listener)
   const { scrollRef } = useMetricsReporter({

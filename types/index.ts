@@ -269,6 +269,8 @@ export interface ScrollLockedViewConfig extends BaseViewConfig {
   scrollEndThreshold?: number;
   /** Behavior for resetting scroll when view becomes active (default: "direction-aware") */
   scrollResetBehavior?: ScrollResetBehavior;
+  /** Force scroll lock behavior even without overflow (default: false) */
+  forceScrollLock?: boolean;
 }
 
 export interface ControlledViewConfig extends BaseViewConfig {

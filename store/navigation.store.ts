@@ -27,10 +27,18 @@ function evaluateStateMachine(
   capability: ScrollCapability,
   progress: number,
   viewType: ViewConfig["type"],
-  explicitLock: NavigationState | null
+  explicitLock: NavigationState | null,
+  forceScrollLock?: boolean
 ): NavigationState {
   
   if (explicitLock) return explicitLock;
+  
+  // If forceScrollLock is true, treat as if there's internal scroll (locked until progress >= 0.99)
+  if (forceScrollLock && viewType === "scroll-locked") {
+    if (progress >= 0.99) return "unlocked";
+    return "locked";
+  }
+  
   if (capability === "none") return "unlocked";
   if (viewType === "full") return "unlocked";
   if (viewType === "nested") return "unlocked"; // Nested views handle scroll internally
@@ -40,6 +48,7 @@ function evaluateStateMachine(
   
   return "locked";
 }
+
 
 function calculateCapability(metrics: ViewMetrics): ScrollCapability {
   if (metrics.scrollHeight - metrics.clientHeight <= 1) {
@@ -148,9 +157,15 @@ export const useScrollStore = create<ScrollSystemStore>()(
 
         const view = state.views[viewIndex];
         
+        // Extract forceScrollLock from config if it's a scroll-locked view
+        const forceScrollLock = view.config.type === "scroll-locked" 
+          ? (view.config as import("../types").ScrollLockedViewConfig).forceScrollLock 
+          : undefined;
+        
         const capability = calculateCapability(metrics);
         const progress = calculateProgress(metrics);
-        const navigation = evaluateStateMachine(capability, progress, view.type, view.explicitLock);
+        const navigation = evaluateStateMachine(capability, progress, view.type, view.explicitLock, forceScrollLock);
+
         
         if (
           view.capability === capability &&
@@ -305,7 +320,14 @@ export const useScrollStore = create<ScrollSystemStore>()(
             if (index === -1) return state;
             
             const view = state.views[index];
-            const navigation = evaluateStateMachine(view.capability, view.progress, view.type, lock);
+            
+            // Extract forceScrollLock from config if it's a scroll-locked view
+            const forceScrollLock = view.config.type === "scroll-locked" 
+              ? (view.config as import("../types").ScrollLockedViewConfig).forceScrollLock 
+              : undefined;
+            
+            const navigation = evaluateStateMachine(view.capability, view.progress, view.type, lock, forceScrollLock);
+
             
             const newViews = [...state.views];
             newViews[index] = { ...view, explicitLock: lock, navigation };
