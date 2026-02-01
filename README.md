@@ -35,6 +35,11 @@ Built for high-performance marketing sites, portfolios, and web apps that requir
 | **Programmatic Lock** | Lock/unlock navigation programmatically |
 | **Auto Mobile Optimization** | Automatically prevents pull-to-refresh |
 
+### 🚀 New in v1.5.0
+| Feature | Description |
+|---------|-------------|
+| **Touch Overscroll Chaining** | `ScrollLockedView` can now chain navigation on mobile when scrolling past boundaries using `enableTouchPassthrough`. |
+
 ### 🆕 New in v1.4.0
 
 | Feature | Description |
@@ -187,6 +192,8 @@ Smart container for long content. Automatically detects overflow and locks navig
 | `className` | `string` | `""` | CSS classes |
 | `scrollDirection` | `"vertical"` \| `"horizontal"` | `"vertical"` | Internal scroll direction |
 | `scrollEndThreshold` | `number` | `0.99` | Progress threshold to unlock (0-1) |
+| `forceScrollLock` | `boolean` | `false` | Force lock even without overflow |
+| `enableTouchPassthrough` | `boolean` | `false` | Enable touch overscroll chaining |
 | `scrollResetBehavior` | `ScrollResetBehavior` | `"direction-aware"` | How to reset scroll position on activation |
 | `onScrollProgress` | `(progress: number) => void` | - | Called on internal scroll |
 | `onActivate` | `() => void` | - | Called when view becomes active |

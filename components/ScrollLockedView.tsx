@@ -20,6 +20,7 @@ export function ScrollLockedView({
   scrollEndThreshold = 0.99,
   scrollResetBehavior = "direction-aware",
   forceScrollLock = false,
+  enableTouchPassthrough = false,
   onScrollProgress,
   onActivate,
   onDeactivate,
@@ -37,6 +38,7 @@ export function ScrollLockedView({
       scrollEndThreshold,
       scrollResetBehavior,
       forceScrollLock,
+      enableTouchPassthrough,
     },
     onActivate,
     onDeactivate,
@@ -46,6 +48,66 @@ export function ScrollLockedView({
     onExitEnd,
   });
 
+  // ========== TOUCH PASSTHROUGH LOGIC ==========
+  const touchStartRef = useRef<{ y: number; scrollTop: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!enableTouchPassthrough || scrollDirection !== "vertical") return;
+    const scrollEl = e.currentTarget;
+    touchStartRef.current = {
+      y: e.touches[0].clientY,
+      scrollTop: scrollEl.scrollTop,
+    };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!enableTouchPassthrough || !touchStartRef.current || scrollDirection !== "vertical") return;
+
+    const deltaY = touchStartRef.current.y - e.changedTouches[0].clientY;
+    const scrollEl = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = scrollEl;
+    const maxScroll = scrollHeight - clientHeight;
+    
+    // Threshold for swipe intention (e.g. 50px)
+    const SWIPE_THRESHOLD = 50;
+
+    if (Math.abs(deltaY) < SWIPE_THRESHOLD) return;
+
+    // 1. Bottom Overscroll -> Swipe Up (deltaY > 0) -> Next View
+    if (deltaY > 0) {
+      // Check if we started at or near bottom AND ended at or near bottom
+      // (Handling iOS bounce where values can be > maxScroll)
+      const startedAtBottom = touchStartRef.current.scrollTop >= maxScroll - 1;
+      const isAtBottom = scrollTop >= maxScroll - 1;
+
+      if (startedAtBottom && isAtBottom) {
+        useScrollStore.getState().processIntention({
+          type: "navigate",
+          direction: "down",
+          strength: 1,
+          origin: "touch",
+        });
+      }
+    }
+
+    // 2. Top Overscroll -> Swipe Down (deltaY < 0) -> Prev View
+    if (deltaY < 0) {
+      const startedAtTop = touchStartRef.current.scrollTop <= 1;
+      const isAtTop = scrollTop <= 1;
+
+      if (startedAtTop && isAtTop) {
+        useScrollStore.getState().processIntention({
+          type: "navigate",
+          direction: "up",
+          strength: 1,
+          origin: "touch",
+        });
+      }
+    }
+
+    touchStartRef.current = null;
+  };
+  // =============================================
 
   // Metrics Reporter (Encapsula ResizeObserver y Scroll Listener)
   const { scrollRef } = useMetricsReporter({
@@ -127,6 +189,8 @@ export function ScrollLockedView({
       <div
         ref={scrollRef}
         className="no-scrollbar"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           position: "absolute",
           top: 0,

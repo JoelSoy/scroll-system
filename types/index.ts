@@ -271,6 +271,8 @@ export interface ScrollLockedViewConfig extends BaseViewConfig {
   scrollResetBehavior?: ScrollResetBehavior;
   /** Force scroll lock behavior even without overflow (default: false) */
   forceScrollLock?: boolean;
+  /** Enable touch overscroll gestures to trigger navigation (default: false) */
+  enableTouchPassthrough?: boolean;
 }
 
 export interface ControlledViewConfig extends BaseViewConfig {
@@ -431,6 +433,8 @@ export interface ScrollLockedViewProps extends BaseViewProps {
   scrollResetBehavior?: ScrollResetBehavior;
   /** Force scroll lock behavior even without overflow (default: false) */
   forceScrollLock?: boolean;
+  /** Enable touch overscroll gestures to trigger navigation (default: false) */
+  enableTouchPassthrough?: boolean;
 }
 
 export interface ControlledViewProps extends BaseViewProps {
